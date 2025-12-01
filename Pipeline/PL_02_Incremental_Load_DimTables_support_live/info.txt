@@ -1,0 +1,6 @@
+selected resource name:		PL_02_Incremental_Load_DimTables
+selected resource type:		pipeline
+factory name:			ecomsprintadf
+factory location:		eastus
+subscription id:		b9969635-2586-4526-abd8-dbcc4b662164
+time of download (UTC):		Mon, 01 Dec 2025 16:18:23 GMT

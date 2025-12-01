@@ -1,0 +1,33 @@
+{
+    "name": "Incremental Load 10 pm",
+    "properties": {
+        "annotations": [],
+        "runtimeState": "Stopped",
+        "pipelines": [
+            {
+                "pipelineReference": {
+                    "referenceName": "PL_02_Incremental_Load_DimTables",
+                    "type": "PipelineReference"
+                }
+            }
+        ],
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+            "recurrence": {
+                "frequency": "Day",
+                "interval": 1,
+                "startTime": "2025-11-20T17:40:00",
+                "endTime": "2025-11-22T10:04:17",
+                "timeZone": "India Standard Time",
+                "schedule": {
+                    "minutes": [
+                        23
+                    ],
+                    "hours": [
+                        23
+                    ]
+                }
+            }
+        }
+    }
+}

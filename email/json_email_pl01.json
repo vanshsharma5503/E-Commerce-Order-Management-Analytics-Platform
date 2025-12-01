@@ -1,0 +1,185 @@
+{
+    "apiVersion": "2019-05-01",
+    "id": "/subscriptions/b9969635-2586-4526-abd8-dbcc4b662164/resourceGroups/sprint1/providers/Microsoft.Logic/workflows/SendEmail_p1",
+    "name": "SendEmail_p1",
+    "type": "microsoft.logic/workflows",
+    "location": "northcentralus",
+    "tags": {},
+    "properties": {
+        "provisioningState": "Succeeded",
+        "createdTime": "2025-11-21T05:35:57.1235779Z",
+        "changedTime": "2025-11-21T05:39:42.2941768Z",
+        "state": "Suspended",
+        "version": "08584376951038786643",
+        "accessEndpoint": "https://prod-04.northcentralus.logic.azure.com:443/workflows/a6ea8ed6bb78481bbf7eaf07e8edaaaa",
+        "definition": {
+            "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+            "contentVersion": "1.0.0.0",
+            "parameters": {
+                "$connections": {
+                    "defaultValue": {},
+                    "type": "Object"
+                }
+            },
+            "triggers": {
+                "When_an_HTTP_request_is_received": {
+                    "type": "Request",
+                    "kind": "Http",
+                    "inputs": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "PipelineName": {
+                                    "type": "string"
+                                },
+                                "body": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "actions": {
+                "Send_email_(V2)": {
+                    "runAfter": {},
+                    "type": "ApiConnection",
+                    "inputs": {
+                        "host": {
+                            "connection": {
+                                "name": "@parameters('$connections')['gmail']['connectionId']"
+                            }
+                        },
+                        "method": "post",
+                        "body": {
+                            "To": "vanshsharma5503@gmail.com",
+                            "Subject": "The status of PL_01_Full Load",
+                            "Body": "<p class=\"editor-paragraph\">@{triggerBody()?['body']\n}</p>"
+                        },
+                        "path": "/v2/Mail"
+                    }
+                }
+            },
+            "outputs": {}
+        },
+        "parameters": {
+            "$connections": {
+                "value": {
+                    "gmail": {
+                        "id": "/subscriptions/b9969635-2586-4526-abd8-dbcc4b662164/providers/Microsoft.Web/locations/northcentralus/managedApis/gmail",
+                        "connectionId": "/subscriptions/b9969635-2586-4526-abd8-dbcc4b662164/resourceGroups/sprint1/providers/Microsoft.Web/connections/gmail",
+                        "connectionName": "gmail"
+                    }
+                }
+            }
+        },
+        "endpointsConfiguration": {
+            "workflow": {
+                "outgoingIpAddresses": [
+                    {
+                        "address": "52.162.177.30"
+                    },
+                    {
+                        "address": "23.101.167.207"
+                    },
+                    {
+                        "address": "20.80.33.190"
+                    },
+                    {
+                        "address": "20.88.47.77"
+                    },
+                    {
+                        "address": "172.183.51.180"
+                    },
+                    {
+                        "address": "40.116.65.125"
+                    },
+                    {
+                        "address": "20.88.51.31"
+                    },
+                    {
+                        "address": "40.116.66.226"
+                    },
+                    {
+                        "address": "40.116.64.218"
+                    },
+                    {
+                        "address": "20.88.55.77"
+                    },
+                    {
+                        "address": "172.183.49.208"
+                    },
+                    {
+                        "address": "20.102.251.70"
+                    },
+                    {
+                        "address": "20.102.255.252"
+                    },
+                    {
+                        "address": "20.88.49.23"
+                    },
+                    {
+                        "address": "172.183.50.30"
+                    },
+                    {
+                        "address": "20.88.49.21"
+                    },
+                    {
+                        "address": "20.102.255.209"
+                    },
+                    {
+                        "address": "172.183.48.255"
+                    }
+                ],
+                "accessEndpointIpAddresses": [
+                    {
+                        "address": "20.98.61.245"
+                    },
+                    {
+                        "address": "172.183.50.180"
+                    },
+                    {
+                        "address": "172.183.52.146"
+                    },
+                    {
+                        "address": "172.183.51.138"
+                    },
+                    {
+                        "address": "172.183.48.31"
+                    },
+                    {
+                        "address": "172.183.48.9"
+                    },
+                    {
+                        "address": "172.183.48.234"
+                    },
+                    {
+                        "address": "40.116.65.34"
+                    }
+                ]
+            },
+            "connector": {
+                "outgoingIpAddresses": [
+                    {
+                        "address": "52.162.126.4"
+                    },
+                    {
+                        "address": "52.162.242.161"
+                    },
+                    {
+                        "address": "52.162.107.160/28"
+                    },
+                    {
+                        "address": "52.162.111.192/27"
+                    },
+                    {
+                        "address": "20.51.4.192/27"
+                    },
+                    {
+                        "address": "20.51.4.224/28"
+                    }
+                ]
+            }
+        }
+    }
+}

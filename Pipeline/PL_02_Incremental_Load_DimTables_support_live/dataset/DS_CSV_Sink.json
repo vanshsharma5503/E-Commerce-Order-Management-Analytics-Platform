@@ -1,0 +1,42 @@
+{
+    "name": "DS_CSV_Sink",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "AzureDataLakeStorage1",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "TargetPath": {
+                "type": "String"
+            },
+            "FileName": {
+                "type": "String"
+            }
+        },
+        "folder": {
+            "name": "JOB 2"
+        },
+        "annotations": [],
+        "type": "DelimitedText",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileName": {
+                    "value": "@dataset().FileName",
+                    "type": "Expression"
+                },
+                "folderPath": {
+                    "value": "@dataset().TargetPath",
+                    "type": "Expression"
+                },
+                "fileSystem": "ecom"
+            },
+            "columnDelimiter": ",",
+            "escapeChar": "\\",
+            "firstRowAsHeader": true,
+            "quoteChar": "\""
+        },
+        "schema": []
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

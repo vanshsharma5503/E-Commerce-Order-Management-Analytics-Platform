@@ -1,0 +1,32 @@
+{
+    "name": "DS_Payment_source",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "LS_Json",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "fileName": {
+                "type": "string"
+            }
+        },
+        "folder": {
+            "name": "Payments_ds"
+        },
+        "annotations": [],
+        "type": "Json",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileName": {
+                    "value": "@dataset().fileName",
+                    "type": "Expression"
+                },
+                "folderPath": "source-data/payment-events",
+                "fileSystem": "ecom"
+            }
+        },
+        "schema": {}
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

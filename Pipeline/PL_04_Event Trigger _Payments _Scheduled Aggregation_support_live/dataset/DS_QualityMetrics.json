@@ -1,0 +1,58 @@
+{
+    "name": "DS_QualityMetrics",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "par_ls_payment",
+            "type": "LinkedServiceReference"
+        },
+        "folder": {
+            "name": "Payments_ds"
+        },
+        "annotations": [],
+        "type": "Parquet",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileName": "part-00000-8d377a34-4615-4b53-8705-0f85ab28ffa6.c000.snappy.parquet",
+                "folderPath": "metrics/payments",
+                "fileSystem": "ecom"
+            },
+            "compressionCodec": "snappy"
+        },
+        "schema": [
+            {
+                "name": "table_name",
+                "type": "UTF8"
+            },
+            {
+                "name": "execution_date",
+                "type": "UTF8"
+            },
+            {
+                "name": "logged_at",
+                "type": "INT96"
+            },
+            {
+                "name": "quality_score",
+                "type": "DOUBLE"
+            },
+            {
+                "name": "total_records",
+                "type": "INT_32"
+            },
+            {
+                "name": "passed_records",
+                "type": "INT_32"
+            },
+            {
+                "name": "failed_records",
+                "type": "INT_32"
+            },
+            {
+                "name": "timestamp",
+                "type": "INT96"
+            }
+        ]
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

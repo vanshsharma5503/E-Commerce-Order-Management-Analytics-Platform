@@ -1,0 +1,443 @@
+{
+    "name": "PL_01_Full Load",
+    "properties": {
+        "description": "One-time full load pipeline to populate Bronze, Silver, and Gold layers with quality check",
+        "activities": [
+            {
+                "name": "Set_SourcePath",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "SourcePath",
+                    "value": {
+                        "value": "abfss://ecom@ecomstoraget1.dfs.core.windows.net/source-data/orders/",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Copy_Orders_CSV_to_Bronze",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Set_SourcePath",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "DelimitedTextSource",
+                        "storeSettings": {
+                            "type": "AzureBlobFSReadSettings",
+                            "recursive": true
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextReadSettings"
+                        }
+                    },
+                    "sink": {
+                        "type": "DelimitedTextSink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings"
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextWriteSettings",
+                            "quoteAllText": true,
+                            "fileExtension": ".txt"
+                        }
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [
+                    {
+                        "referenceName": "DS_Orders_Source",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "fileName": "orders20250110.csv"
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "DS_Orders_StagingSink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "filename": "orders20250110.csv"
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Copy_Customers_SQL_to_Bronze",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Copy_Orders_CSV_to_Bronze",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlSource",
+                        "partitionOption": "None"
+                    },
+                    "sink": {
+                        "type": "DelimitedTextSink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings"
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextWriteSettings",
+                            "quoteAllText": true,
+                            "fileExtension": ".txt"
+                        }
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [
+                    {
+                        "referenceName": "DS_Table_Customers_sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "SchemaName": "dbo",
+                            "TableName": "customers20250110"
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "DS_CSV_Sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "TargetPath": "bronze/customers_raw",
+                            "FileName": "customers20250110.csv"
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Copy_Products_SQL_to_Bronze",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Copy_Customers_SQL_to_Bronze",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlSource",
+                        "partitionOption": "None"
+                    },
+                    "sink": {
+                        "type": "DelimitedTextSink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings"
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextWriteSettings",
+                            "quoteAllText": true,
+                            "fileExtension": ".txt"
+                        }
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [
+                    {
+                        "referenceName": "DS_Table_Products_sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "SchemaName": "dbo",
+                            "TableName": "products20250110"
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "DS_CSV_Sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "TargetPath": "bronze/products_raw",
+                            "FileName": "products20250110.csv"
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Job_1_Run_Bronze_Orders_Load",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "Copy_Products_SQL_to_Bronze",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "391630839920083",
+                    "jobParameters": {
+                        "source_path": {
+                            "value": "@variables('SourcePath')",
+                            "type": "Expression"
+                        },
+                        "target_path": "abfss://ecom@ecomstoraget1.dfs.core.windows.net/bronze/orders_raw/",
+                        "execution_date": {
+                            "value": "@pipeline().parameters.ExecutionDate",
+                            "type": "Expression"
+                        },
+                        "load_mode": "overwrite"
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Job_4_Silver_Transformations",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "Job_1_Run_Bronze_Orders_Load",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "522287404461164"
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Job_5_Job_Gold_Dimensions_Facts",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "Job_4_Silver_Transformations",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "726459322780616"
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Lookup_QualityScore",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "Job_5_Job_Gold_Dimensions_Facts",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "ParquetSource",
+                        "storeSettings": {
+                            "type": "AzureBlobFSReadSettings",
+                            "recursive": true,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "ParquetReadSettings"
+                        }
+                    },
+                    "dataset": {
+                        "referenceName": "DS_QualityMetrics",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                }
+            },
+            {
+                "name": "Set_QualityScore",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_QualityScore",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "QualityScore",
+                    "value": {
+                        "value": "@string(activity('Lookup_QualityScore').output.firstRow.quality_score)",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "If_QualityCheck",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "Set_QualityScore",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@greaterOrEquals(float(variables('QualityScore')), 95)",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "Send_Alert_Email",
+                            "type": "WebActivity",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.00:05:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "method": "POST",
+                                "headers": {
+                                    "Content-Type": "application/json"
+                                },
+                                "url": "https://prod-04.northcentralus.logic.azure.com:443/workflows/a6ea8ed6bb78481bbf7eaf07e8edaaaa/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=xw8vLUbhIDQQ9VLiyoLzS5MFBNwveKizpOTW7Q-KsFM",
+                                "body": {
+                                    "subject": "PL_01 Full Load Failed",
+                                    "body": "⚠️ Quality score below threshold. Please investigate Bronze/Silver/Gold steps.",
+                                    "processing_date": "@variables('ProcessingDate')",
+                                    "quality_score": "@variables('QualityScore')"
+                                }
+                            }
+                        }
+                    ],
+                    "ifTrueActivities": [
+                        {
+                            "name": "Send_Success_Email",
+                            "type": "WebActivity",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.00:05:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "method": "POST",
+                                "headers": {
+                                    "Content-Type": "application/json"
+                                },
+                                "url": "https://prod-04.northcentralus.logic.azure.com:443/workflows/a6ea8ed6bb78481bbf7eaf07e8edaaaa/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=xw8vLUbhIDQQ9VLiyoLzS5MFBNwveKizpOTW7Q-KsFM",
+                                "body": {
+                                    "body": "Hi Team,\n\nThe pipeline has completed SUCCESSFULLY.\n\nQuality Score: "
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "ExecutionDate": {
+                "type": "String",
+                "defaultValue": "@utcNow()"
+            }
+        },
+        "variables": {
+            "SourcePath": {
+                "type": "String"
+            },
+            "ProcessingDate": {
+                "type": "String"
+            },
+            "QualityScore": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2025-11-21T06:04:47Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

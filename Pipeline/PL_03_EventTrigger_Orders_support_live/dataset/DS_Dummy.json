@@ -1,0 +1,65 @@
+{
+    "name": "DS_Dummy",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "AzureDataLakeStorage1",
+            "type": "LinkedServiceReference"
+        },
+        "annotations": [],
+        "type": "DelimitedText",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "folderPath": "source-data/orders",
+                "fileSystem": "ecom"
+            },
+            "columnDelimiter": ",",
+            "escapeChar": "\\",
+            "firstRowAsHeader": true,
+            "quoteChar": "\""
+        },
+        "schema": [
+            {
+                "name": "orderid",
+                "type": "String"
+            },
+            {
+                "name": "customerid",
+                "type": "String"
+            },
+            {
+                "name": "orderdate",
+                "type": "String"
+            },
+            {
+                "name": "orderamount",
+                "type": "String"
+            },
+            {
+                "name": "productid",
+                "type": "String"
+            },
+            {
+                "name": "quantity",
+                "type": "String"
+            },
+            {
+                "name": "status",
+                "type": "String"
+            },
+            {
+                "name": "paymentmethod",
+                "type": "String"
+            },
+            {
+                "name": "region",
+                "type": "String"
+            },
+            {
+                "name": "createdtimestamp",
+                "type": "String"
+            }
+        ]
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,266 @@
+{
+    "name": "PL_03_EventTrigger_Orders",
+    "properties": {
+        "activities": [
+            {
+                "name": "bronze_orders_load",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "SetSourcePath",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "391630839920083",
+                    "jobParameters": {
+                        "source_path": {
+                            "value": "@variables('SourcePath')",
+                            "type": "Expression"
+                        },
+                        "target_path": "abfss://ecom@ecomstoraget1.dfs.core.windows.net/bronze/orders_raw/",
+                        "execution_date": {
+                            "value": "@utcNow('yyyy-MM-dd')",
+                            "type": "Expression"
+                        },
+                        "load_mode": "overwrite"
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "silver_transformations",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "bronze_orders_load",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "522287404461164"
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "GetTriggerMetadata",
+                "type": "GetMetadata",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "dataset": {
+                        "referenceName": "DS_Dummy",
+                        "type": "DatasetReference"
+                    },
+                    "fieldList": [
+                        "childItems"
+                    ],
+                    "storeSettings": {
+                        "type": "AzureBlobFSReadSettings",
+                        "recursive": true,
+                        "enablePartitionDiscovery": false
+                    },
+                    "formatSettings": {
+                        "type": "DelimitedTextReadSettings"
+                    }
+                }
+            },
+            {
+                "name": "CopytoStaging",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "SetTriggerfilepath",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "DelimitedTextSource",
+                        "storeSettings": {
+                            "type": "AzureBlobFSReadSettings",
+                            "recursive": true,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextReadSettings"
+                        }
+                    },
+                    "sink": {
+                        "type": "DelimitedTextSink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings"
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextWriteSettings",
+                            "quoteAllText": true,
+                            "fileExtension": ".txt"
+                        }
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                },
+                "inputs": [
+                    {
+                        "referenceName": "DS_Orders_Source",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "fileName": {
+                                "value": "@variables('TriggerFilePath')",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "DS_Orders_StagingSink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "filename": {
+                                "value": "@variables('TriggerFilePath')",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "SetTriggerfilepath",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "GetTriggerMetadata",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "TriggerFilePath",
+                    "value": {
+                        "value": "@activity('GetTriggerMetadata').output.childItems[0].name",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "SetSourcePath",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "CopytoStaging",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "SourcePath",
+                    "value": {
+                        "value": "@concat('abfss://ecom@ecomstoraget1.dfs.core.windows.net/temp/staging/Orders/', variables('TriggerFilePath'))",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "gold_transformations",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "silver_transformations",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "726459322780616"
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            }
+        ],
+        "variables": {
+            "TriggerFilePath": {
+                "type": "String"
+            },
+            "SourcePath": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2025-11-20T18:33:47Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

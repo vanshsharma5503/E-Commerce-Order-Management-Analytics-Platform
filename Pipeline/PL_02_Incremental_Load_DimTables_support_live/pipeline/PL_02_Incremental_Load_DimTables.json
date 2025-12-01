@@ -1,0 +1,606 @@
+{
+    "name": "PL_02_Incremental_Load_DimTables",
+    "properties": {
+        "description": "Daily incremental load of Customers & Products from Azure SQL to ADLS, then Bronze → Silver → Gold via Databricks. Includes watermark updates, quality check, and notifications.",
+        "activities": [
+            {
+                "name": "Set_ProcessingDate",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "ProcessingDate",
+                    "value": {
+                        "value": "@utcNow()",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Lookup_MaxCustomerDate",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": "SELECT CONVERT(VARCHAR(10), MAX(updated_date), 23) AS max_date FROM dbo.Customers20250110 WHERE updated_date IS NOT NULL",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_Table_Customers_sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "SchemaName": "dbo",
+                            "TableName": "customers20250110"
+                        }
+                    },
+                    "firstRowOnly": true
+                },
+                "linkedServiceName": {
+                    "referenceName": "SSMS_Team1_LS",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Set_MaxCustomerDate",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_MaxCustomerDate",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "MaxCustomerDate",
+                    "value": {
+                        "value": "@coalesce(activity('Lookup_MaxCustomerDate').output.firstRow.max_date, '1900-01-01')",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Copy_Incremental_Customers",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Set_MaxCustomerDate",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": {
+                            "value": "@concat('SELECT * FROM ', pipeline().parameters.CustomerSchema, '.', pipeline().parameters.CustomerTable, ' WHERE updated_date > ''', variables('MaxCustomerDate'), '''')",
+                            "type": "Expression"
+                        },
+                        "partitionOption": "None"
+                    },
+                    "sink": {
+                        "type": "DelimitedTextSink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings"
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextWriteSettings",
+                            "quoteAllText": true,
+                            "fileExtension": ".csv"
+                        }
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [
+                    {
+                        "referenceName": "DS_Table_Customers_sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "SchemaName": "@pipeline().parameters.CustomerSchema",
+                            "TableName": "@pipeline().parameters.CustomerTable"
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "DS_CSV_Sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "TargetPath": "bronze/customers_incremental/",
+                            "FileName": "@concat('customers_inc_', formatDateTime(variables('ProcessingDate'), 'yyyyMMddHHmmss'), '.csv')"
+                        }
+                    }
+                ],
+                "linkedServiceName": {
+                    "referenceName": "SSMS_Team1_LS",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Lookup_MaxProductDate",
+                "type": "Lookup",
+                "dependsOn": [],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": "SELECT CONVERT(VARCHAR(10), MAX(updateddate), 23) AS max_date FROM dbo.Products20250110 WHERE updateddate IS NOT NULL",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_Table_Products_sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "SchemaName": "dbo",
+                            "TableName": "products20250110"
+                        }
+                    },
+                    "firstRowOnly": true
+                },
+                "linkedServiceName": {
+                    "referenceName": "SSMS_Team1_LS",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Set_MaxProductDate",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_MaxProductDate",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "MaxProductDate",
+                    "value": {
+                        "value": "@coalesce(activity('Lookup_MaxProductDate').output.firstRow.max_date, '1900-01-01')",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Copy_Incremental_Products",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Set_MaxProductDate",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": {
+                            "value": "@concat('SELECT * FROM ', pipeline().parameters.ProductSchema, '.', pipeline().parameters.ProductTable, ' WHERE updateddate > ''', variables('MaxProductDate'), '''')",
+                            "type": "Expression"
+                        },
+                        "partitionOption": "None"
+                    },
+                    "sink": {
+                        "type": "DelimitedTextSink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings"
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextWriteSettings",
+                            "quoteAllText": true,
+                            "fileExtension": ".csv"
+                        }
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [
+                    {
+                        "referenceName": "DS_Table_Products_sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "SchemaName": "@pipeline().parameters.ProductSchema",
+                            "TableName": "@pipeline().parameters.ProductTable"
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "DS_CSV_Sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "TargetPath": "bronze/products_incremental/",
+                            "FileName": "@concat('products_inc_', formatDateTime(variables('ProcessingDate'), 'yyyyMMddHHmmss'), '.csv')"
+                        }
+                    }
+                ],
+                "linkedServiceName": {
+                    "referenceName": "SSMS_Team1_LS",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Job_2_Bronze_Incremental_Dims",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "Copy_Incremental_Customers",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    },
+                    {
+                        "activity": "Copy_Incremental_Products",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "36974083779138",
+                    "baseParameters": {
+                        "source_table_customers": "bronze/customers_incremental/",
+                        "source_table_products": "bronze/products_incremental/",
+                        "max_customer_date": "@variables('MaxCustomerDate')",
+                        "max_product_date": "@variables('MaxProductDate')",
+                        "execution_date": "@variables('ProcessingDate')"
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Job_Silver_Transformations",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "Job_2_Bronze_Incremental_Dims",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "522287404461164",
+                    "baseParameters": {
+                        "bronze_tables": "@pipeline().parameters.bronzeTablesCsv",
+                        "quality_threshold": "@pipeline().parameters.qualityThreshold",
+                        "operation_type": "@pipeline().parameters.operationType",
+                        "execution_date": "@variables('ProcessingDate')"
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Job_Gold_Dimensions_Facts",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "Job_Silver_Transformations",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "726459322780616",
+                    "baseParameters": {
+                        "operation_type": "incremental_scd",
+                        "scd_type_customer": "2",
+                        "scd_type_product": "1",
+                        "execution_date": "@variables('ProcessingDate')"
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Lookup_QualityScore",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "Copy data_Delta to SQL",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "AzureSqlSource",
+                        "sqlReaderQuery": "SELECT CAST(MAX(quality_score) AS FLOAT) AS quality_score\nFROM dbo.quality_metrics\nWHERE execution_date = CAST(GETDATE() AS DATE)",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "DS_quality_metrics_sql",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": true
+                },
+                "linkedServiceName": {
+                    "referenceName": "SSMS_Team1_LS",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Set_QualityScore",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_QualityScore",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "QualityScore",
+                    "value": {
+                        "value": "@int(coalesce(activity('Lookup_QualityScore').output.firstRow.quality_score, 0))",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "If_QualityCheck",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "Set_QualityScore",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@greaterOrEquals(variables('QualityScore'), 95)",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "Send_Failure_Email",
+                            "type": "WebActivity",
+                            "dependsOn": [],
+                            "policy": {
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "method": "POST",
+                                "headers": {
+                                    "Content-Type": "application/json"
+                                },
+                                "url": "https://prod-59.eastus.logic.azure.com:443/workflows/68bbae1ca059492fb83d378d7bf2c10d/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=HurnW5IW4s93WFkiWgBb_n5JKA0D4LwWdRvbkhD2QM4",
+                                "body": {
+                                    "subject": "PL_02 Incremental Load Failed",
+                                    "body": "Quality score below threshold. Please investigate Bronze/Silver/Gold steps.",
+                                    "processing_date": "@variables('ProcessingDate')",
+                                    "quality_score": "@variables('QualityScore')"
+                                }
+                            }
+                        }
+                    ],
+                    "ifTrueActivities": [
+                        {
+                            "name": "Send_Success_Email",
+                            "type": "WebActivity",
+                            "dependsOn": [],
+                            "policy": {
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "method": "POST",
+                                "headers": {
+                                    "Content-Type": "application/json"
+                                },
+                                "url": "https://prod-59.eastus.logic.azure.com:443/workflows/68bbae1ca059492fb83d378d7bf2c10d/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=HurnW5IW4s93WFkiWgBb_n5JKA0D4LwWdRvbkhD2QM4",
+                                "body": {
+                                    "subject": "PL_02 Incremental Load Completed",
+                                    "body": "✅ Incremental load completed successfully.\n\nUpdated Row Counts:\n- Customers: @activity('Copy_Customers_SQL_to_Bronze').output.rowsCopied\n- Products: @activity('Copy_Products_SQL_to_Bronze').output.rowsCopied\n\nSCD Operations:\n- Customer Dimension: SCD Type 2 applied\n- Product Dimension: SCD Type 1 applied\n\nQuality Score: @variables('QualityScore')\nProcessing Date: @variables('ProcessingDate')"
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "Copy data_Delta to SQL",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Job_Gold_Dimensions_Facts",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "ParquetSource",
+                        "storeSettings": {
+                            "type": "AzureBlobFSReadSettings",
+                            "recursive": true,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "ParquetReadSettings"
+                        }
+                    },
+                    "sink": {
+                        "type": "AzureSqlSink",
+                        "writeBehavior": "insert",
+                        "sqlWriterUseTableLock": false
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                },
+                "inputs": [
+                    {
+                        "referenceName": "DS_quality_metrics_delta",
+                        "type": "DatasetReference"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "DS_quality_metrics_sql",
+                        "type": "DatasetReference"
+                    }
+                ]
+            }
+        ],
+        "parameters": {
+            "bronzeTablesCsv": {
+                "type": "String",
+                "defaultValue": "orders_raw,customers_raw,products_raw"
+            },
+            "qualityThreshold": {
+                "type": "Int",
+                "defaultValue": 95
+            },
+            "operationType": {
+                "type": "String",
+                "defaultValue": "incremental"
+            },
+            "CustomerSchema": {
+                "type": "String",
+                "defaultValue": "dbo"
+            },
+            "CustomerTable": {
+                "type": "String",
+                "defaultValue": "customers20250110"
+            },
+            "ProductSchema": {
+                "type": "String",
+                "defaultValue": "dbo"
+            },
+            "ProductTable": {
+                "type": "String",
+                "defaultValue": "products20250110"
+            }
+        },
+        "variables": {
+            "ProcessingDate": {
+                "type": "String"
+            },
+            "MaxCustomerDate": {
+                "type": "String"
+            },
+            "MaxProductDate": {
+                "type": "String"
+            },
+            "QualityScore": {
+                "type": "Integer"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2025-11-21T06:20:12Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

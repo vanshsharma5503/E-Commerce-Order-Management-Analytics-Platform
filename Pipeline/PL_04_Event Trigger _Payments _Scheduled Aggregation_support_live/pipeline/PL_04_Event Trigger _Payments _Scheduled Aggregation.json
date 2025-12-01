@@ -1,0 +1,346 @@
+{
+    "name": "PL_04_Event Trigger _Payments _Scheduled Aggregation",
+    "properties": {
+        "activities": [
+            {
+                "name": "Copy_activity_source_staging",
+                "type": "Copy",
+                "dependsOn": [],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "JsonSource",
+                        "storeSettings": {
+                            "type": "AzureBlobFSReadSettings",
+                            "recursive": true,
+                            "wildcardFileName": {
+                                "value": "@pipeline().parameters.input_file_name",
+                                "type": "Expression"
+                            },
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "JsonReadSettings"
+                        }
+                    },
+                    "sink": {
+                        "type": "JsonSink",
+                        "storeSettings": {
+                            "type": "AzureBlobFSWriteSettings"
+                        },
+                        "formatSettings": {
+                            "type": "JsonWriteSettings"
+                        }
+                    },
+                    "enableStaging": false
+                },
+                "inputs": [
+                    {
+                        "referenceName": "DS_Payment_source",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "fileName": {
+                                "value": "@pipeline().parameters.input_file_name",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ],
+                "outputs": [
+                    {
+                        "referenceName": "DS_Payment_sink",
+                        "type": "DatasetReference",
+                        "parameters": {
+                            "fileName": {
+                                "value": "@pipeline().parameters.input_file_name",
+                                "type": "Expression"
+                            }
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Job3_bronze_creation",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "Copy_activity_source_staging",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "803730915250551",
+                    "jobParameters": {
+                        "deduplication": "true",
+                        "file_format": "json",
+                        "source_path": "abfss://ecom@ecomstoraget1.dfs.core.windows.net/temp/staging/Payment",
+                        "target_table": "abfss://ecom@ecomstoraget1.dfs.core.windows.net/bronze/payment_events_raw"
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Job4_silver_transformation",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "Job3_bronze_creation",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "726459322780616"
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Job6_quality_metrics",
+                "type": "DatabricksJob",
+                "dependsOn": [
+                    {
+                        "activity": "Job4_silver_transformation",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "jobId": "216836925707713"
+                },
+                "linkedServiceName": {
+                    "referenceName": "ADB_Linked_Service_T1",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Lookup_score",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "Job6_quality_metrics",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "ParquetSource",
+                        "storeSettings": {
+                            "type": "AzureBlobFSReadSettings",
+                            "recursive": true,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "ParquetReadSettings"
+                        }
+                    },
+                    "dataset": {
+                        "referenceName": "DS_QualityMetrics",
+                        "type": "DatasetReference"
+                    }
+                }
+            },
+            {
+                "name": "Set_QualityScore",
+                "type": "SetVariable",
+                "dependsOn": [
+                    {
+                        "activity": "Lookup_score",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "QualityScore",
+                    "value": {
+                        "value": "@string(activity('Lookup_score').output.firstRow.quality_score)",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "If Condition1",
+                "description": "",
+                "type": "IfCondition",
+                "dependsOn": [
+                    {
+                        "activity": "Set_QualityScore",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "expression": {
+                        "value": "@greaterOrEquals(float(variables('QualityScore')), 95)\n",
+                        "type": "Expression"
+                    },
+                    "ifFalseActivities": [
+                        {
+                            "name": "Web_failed",
+                            "type": "WebActivity",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "method": "POST",
+                                "url": "https://prod-06.northcentralus.logic.azure.com:443/workflows/a122d0428e78414c9f3965c0dbc46a00/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=b1hhyKO7h6_qBXqKyPmfmhQxNAQdWnsKJh_Itdkz1xQ",
+                                "body": {
+                                    "value": "Hi Team,\n\nThe PL_04_EventTrigger_Payments_and_Aggregation pipeline has FAILED.\n\nRun Summary:\n- Execution Date (UTC): @{utcNow('yyyy-MM-dd')}\n- Pipeline Run ID: @{pipeline().RunId}\n\nQuality Metrics:\n- Quality Score: @{activity('Lookup_score').output.firstRow.quality_score}%\n- Total Records Processed: @{activity('Lookup_score').output.firstRow.total_records}\n- Passed Records: @{activity('Lookup_score').output.firstRow.passed_records}\n- Failed Records: @{activity('Lookup_score').output.firstRow.failed_records}\n\nStatus: FAILED\n\nRegards,\nADF PL_04 Event Trigger Pipeline\n",
+                                    "type": "Expression"
+                                }
+                            }
+                        }
+                    ],
+                    "ifTrueActivities": [
+                        {
+                            "name": "Web_success",
+                            "type": "WebActivity",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "method": "POST",
+                                "url": "https://prod-06.northcentralus.logic.azure.com:443/workflows/a122d0428e78414c9f3965c0dbc46a00/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=b1hhyKO7h6_qBXqKyPmfmhQxNAQdWnsKJh_Itdkz1xQ",
+                                "body": {
+                                    "body": "Hi Team,\n\nThe pipeline has completed SUCCESSFULLY.\n\nQuality Score: @{activity('Lookup_score').output.firstRow.quality_score}%\nTotal Records: @{activity('Lookup_score').output.firstRow.total_records}\nPassed: @{activity('Lookup_score').output.firstRow.passed_records}\nFailed: @{activity('Lookup_score').output.firstRow.failed_records}\n\nRegards,\nADF Pipeline"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "input_file_name": {
+                "type": "string"
+            },
+            "deduplication": {
+                "type": "string",
+                "defaultValue": "true"
+            },
+            "file_format": {
+                "type": "string",
+                "defaultValue": "json"
+            },
+            "source_path": {
+                "type": "string",
+                "defaultValue": " abfss://ecom@ecomstoraget1.dfs.core.windows.net/temp/staging/Payment"
+            },
+            "target_table": {
+                "type": "string",
+                "defaultValue": " abfss://ecom@ecomstoraget1.dfs.core.windows.net/bronze/payment_events_raw"
+            },
+            "bronze_tables": {
+                "type": "string",
+                "defaultValue": "orders_raw,customers_raw,products_raw,payment_events_raw"
+            },
+            "operation_type": {
+                "type": "string",
+                "defaultValue": "incremental"
+            },
+            "execution_date": {
+                "type": "string",
+                "defaultValue": "@utcNow"
+            },
+            "quality_threshold": {
+                "type": "string",
+                "defaultValue": "95"
+            },
+            "aggregation_type": {
+                "type": "string",
+                "defaultValue": "daily"
+            }
+        },
+        "variables": {
+            "TriggerFileName": {
+                "type": "String"
+            },
+            "StagingFilePath": {
+                "type": "String"
+            },
+            "ErrorFlag": {
+                "type": "Boolean",
+                "defaultValue": false
+            },
+            "StatusFilePath": {
+                "type": "String"
+            },
+            "QualityScore": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2025-11-21T02:37:59Z"
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

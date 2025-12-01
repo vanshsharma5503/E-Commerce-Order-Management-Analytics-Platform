@@ -1,0 +1,32 @@
+{
+    "name": "trigger_schedule",
+    "properties": {
+        "annotations": [],
+        "runtimeState": "Stopped",
+        "pipelines": [
+            {
+                "pipelineReference": {
+                    "referenceName": "PL_04_Event Trigger _Payments _Scheduled Aggregation",
+                    "type": "PipelineReference"
+                },
+                "parameters": {
+                    "input_file_name": "@triggerBody().fileName"
+                }
+            }
+        ],
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+            "recurrence": {
+                "frequency": "Month",
+                "interval": 1,
+                "startTime": "2025-11-20T20:09:00",
+                "timeZone": "India Standard Time",
+                "schedule": {
+                    "monthDays": [
+                        20
+                    ]
+                }
+            }
+        }
+    }
+}

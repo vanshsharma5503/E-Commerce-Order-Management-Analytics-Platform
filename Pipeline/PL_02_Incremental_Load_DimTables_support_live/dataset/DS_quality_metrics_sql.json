@@ -1,0 +1,50 @@
+{
+    "name": "DS_quality_metrics_sql",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "SSMS_Team1_LS",
+            "type": "LinkedServiceReference"
+        },
+        "folder": {
+            "name": "JOB 2"
+        },
+        "annotations": [],
+        "type": "AzureSqlTable",
+        "schema": [
+            {
+                "name": "table_name",
+                "type": "nvarchar"
+            },
+            {
+                "name": "quality_score",
+                "type": "float",
+                "precision": 15
+            },
+            {
+                "name": "total_records",
+                "type": "int",
+                "precision": 10
+            },
+            {
+                "name": "passed_records",
+                "type": "int",
+                "precision": 10
+            },
+            {
+                "name": "execution_date",
+                "type": "date"
+            },
+            {
+                "name": "timestamp",
+                "type": "datetime",
+                "precision": 23,
+                "scale": 3
+            }
+        ],
+        "typeProperties": {
+            "schema": "dbo",
+            "table": "quality_metrics"
+        }
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

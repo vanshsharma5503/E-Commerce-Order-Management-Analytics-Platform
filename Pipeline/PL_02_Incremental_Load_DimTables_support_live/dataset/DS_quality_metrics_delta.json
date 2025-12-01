@@ -1,0 +1,42 @@
+{
+    "name": "DS_quality_metrics_delta",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "Parquet_LS",
+            "type": "LinkedServiceReference"
+        },
+        "folder": {
+            "name": "JOB 2"
+        },
+        "annotations": [],
+        "type": "Parquet",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobFSLocation",
+                "fileName": "part-00000-05eac80d-214d-4c53-a164-73ee7002af44.c000.snappy.parquet",
+                "folderPath": "metrics/quality_metrics",
+                "fileSystem": "ecom"
+            },
+            "compressionCodec": "snappy"
+        },
+        "schema": [
+            {
+                "name": "table_name",
+                "type": "UTF8"
+            },
+            {
+                "name": "row_count",
+                "type": "INT_64"
+            },
+            {
+                "name": "execution_date",
+                "type": "UTF8"
+            },
+            {
+                "name": "logged_at",
+                "type": "INT96"
+            }
+        ]
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

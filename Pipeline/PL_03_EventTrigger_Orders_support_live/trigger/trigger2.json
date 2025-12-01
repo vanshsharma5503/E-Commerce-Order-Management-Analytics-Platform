@@ -1,0 +1,29 @@
+{
+    "name": "trigger2",
+    "properties": {
+        "annotations": [],
+        "runtimeState": "Stopped",
+        "pipelines": [
+            {
+                "pipelineReference": {
+                    "referenceName": "PL_03_EventTrigger_Orders",
+                    "type": "PipelineReference"
+                }
+            }
+        ],
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+            "recurrence": {
+                "frequency": "Month",
+                "interval": 1,
+                "startTime": "2025-11-21T11:11:00",
+                "timeZone": "India Standard Time",
+                "schedule": {
+                    "monthDays": [
+                        20
+                    ]
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "name": "trigger1",
+    "properties": {
+        "annotations": [],
+        "runtimeState": "Stopped",
+        "pipelines": [
+            {
+                "pipelineReference": {
+                    "referenceName": "PL_02_Incremental_Load_DimTables",
+                    "type": "PipelineReference"
+                }
+            }
+        ],
+        "type": "ScheduleTrigger",
+        "typeProperties": {
+            "recurrence": {
+                "frequency": "Month",
+                "interval": 1,
+                "startTime": "2025-11-21T11:11:00",
+                "endTime": "2025-11-22T10:04:45",
+                "timeZone": "India Standard Time",
+                "schedule": {
+                    "monthDays": [
+                        20
+                    ]
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,76 @@
+{
+    "name": "DS_Table_Products_sink",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "SSMS_Team1_LS",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "SchemaName": {
+                "type": "String",
+                "defaultValue": "dbo"
+            },
+            "TableName": {
+                "type": "String",
+                "defaultValue": "products"
+            }
+        },
+        "folder": {
+            "name": "JOB 2"
+        },
+        "annotations": [],
+        "type": "AzureSqlTable",
+        "schema": [
+            {
+                "name": "productid",
+                "type": "nvarchar"
+            },
+            {
+                "name": "productname",
+                "type": "nvarchar"
+            },
+            {
+                "name": "category",
+                "type": "nvarchar"
+            },
+            {
+                "name": "subcategory",
+                "type": "nvarchar"
+            },
+            {
+                "name": "unitprice",
+                "type": "float",
+                "precision": 15
+            },
+            {
+                "name": "stockquantity",
+                "type": "smallint",
+                "precision": 5
+            },
+            {
+                "name": "supplierid",
+                "type": "nvarchar"
+            },
+            {
+                "name": "createddate",
+                "type": "date"
+            },
+            {
+                "name": "updateddate",
+                "type": "datetime2",
+                "scale": 7
+            }
+        ],
+        "typeProperties": {
+            "schema": {
+                "value": "@dataset().SchemaName",
+                "type": "Expression"
+            },
+            "table": {
+                "value": "@dataset().TableName",
+                "type": "Expression"
+            }
+        }
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}
